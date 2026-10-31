@@ -10,6 +10,7 @@ import MLXToolKit
 //
 // - qwen3-tts (CustomVoice): audio.speak with the nine preset speakers, an emotion label or a delivery description,
 //   ten languages. Without a voice it picks the speaker native to the language.
+// - qwen3-tts-clone (Base): audio.speak in a voice cloned from voice_ref, keyed by its MES asset (Clone.swift).
 // - qwen3-tts-design (VoiceDesign): audio.design_voice. A description of a voice in words, read back as `count`
 //   samples of one sentence at seed + i (Audio §3.1). The sample is the voice: a client clones it with voice_ref.
 //
@@ -224,8 +225,9 @@ let designOffer = PluginManifest.Offer(
     ])
 
 public let qwen3Plugin = GaeaPluginDefinition(
-    id: "com.xocialize.gaea.qwen3-tts", version: "0.1.0", minGaea: "0.9.0", team: "CFZS6RXUCP",
+    id: "com.xocialize.gaea.qwen3-tts", version: "0.2.0", minGaea: "0.9.0", team: "CFZS6RXUCP",
     repo: "https://github.com/xocialize-code/gaea-plugin-qwen3-tts", title: "Qwen3-TTS",
-    summary: "Qwen3-TTS 1.7B: expressive speech in ten languages with nine preset speakers (MES audio.speak), and voices designed from a description (audio.design_voice).",
+    summary: "Qwen3-TTS 1.7B: expressive speech in ten languages with nine preset speakers, speech in a voice cloned from a clip (MES audio.speak), and voices designed from a description (audio.design_voice).",
     license: "Apache-2.0", executable: "gaea-qwen3-tts-worker",
-    models: [speakModel, designModel], offers: [speakOffer, designOffer])
+    models: [speakModel, cloneModel, designModel], offers: [speakOffer, cloneOffer, designOffer],
+    onAssetRemoved: forgetAsset)

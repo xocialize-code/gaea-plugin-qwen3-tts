@@ -1,5 +1,5 @@
 {
-  "originHash" : "80aa980fa4b3acf0784d05982b4df048bcbeefb0a4d662074e16106bdc1d44cd",
+  "originHash" : "ecb83603cc56944291e4b1a2a75d9576c3fc093f050ac46829345a8f070b1f0f",
   "pins" : [
     {
       "identity" : "designscaffold",
@@ -24,8 +24,8 @@
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/xocialize-code/gaea-plugin-kit.git",
       "state" : {
-        "revision" : "1faae0fe9776b9a9fcc909cdb15673499e5b599d",
-        "version" : "0.7.1"
+        "revision" : "2bd93fb53e542388ea31b7de0d5d165644443c33",
+        "version" : "0.8.0"
       }
     },
     {
@@ -42,8 +42,8 @@
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/xocialize/mlx-qwen3-tts-swift.git",
       "state" : {
-        "revision" : "767ef3aa6a320f63018f379f5756dc7acef10d79",
-        "version" : "0.6.0"
+        "revision" : "08837b9cf3087346250745659fc07f1ef8e916f1",
+        "version" : "0.7.0"
       }
     },
     {
@@ -60,8 +60,8 @@
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/xocialize/qwen3-tts-mlx-swift.git",
       "state" : {
-        "revision" : "248d2695b1ed5f2a3c2fb734538ebdb7c6eb59f1",
-        "version" : "0.1.3"
+        "revision" : "6d7e687d9d749fa8f7a683085ebb747ea464a44b",
+        "version" : "0.2.0"
       }
     },
     {

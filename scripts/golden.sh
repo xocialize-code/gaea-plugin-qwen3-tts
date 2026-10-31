@@ -5,8 +5,9 @@
 #
 #   scripts/golden.sh <out-dir>     (after scripts/build-plugin.sh)
 #
-# Cases (int8): ryan with no emotion, ryan angry, aiden with a delivery description, vivian in Chinese with a pause, and
-# two designed samples (seed 7 and 8) of one description.
+# Cases (int8): ryan with no emotion, ryan angry, aiden with a delivery description, vivian in Chinese with a pause, two
+# designed samples (seed 7 and 8) of one description, and that design's first sample cloned, with its text (ICL) and
+# without (x-vector).
 set -uo pipefail
 ROOT=${0:A:h:h}
 cd $ROOT
@@ -51,6 +52,24 @@ $INPROC design --description "$DESC" --count 2 --language en --seed 7 --models-r
 say "      design: over GPP $(grep -o 'ran in [0-9.]* s' $OUT/design-gpp.log | head -1); in-process $(cat $OUT/design-inproc.json)"
 same "design sample 0 (seed 7)" $OUT/design-gpp-0.wav $OUT/design-inproc/samples-0.wav
 same "design sample 1 (seed 8)" $OUT/design-gpp-1.wav $OUT/design-inproc/samples-1.wav
+
+# clone <name> <params json> [inproc args…]: the first designed sample as voice_ref
+clone() {
+  local name=$1 params=$2; shift 2
+  $CHECK $B --operation audio.speak --model qwen3-tts-clone --lane int8 --params $params --seed 9 \
+    --text "text=$CLONETEXT" "$@" --input "voice_ref=$OUT/design-gpp-0.wav" \
+    --models-root "$MODELS" --budget 64000000000 --timeout 900 --session $OUT/$name.gpp > $OUT/$name-gpp.log 2>&1
+  local file=$(outputs $OUT/$name-gpp.log | tail -1); [[ -f $file ]] && cp $file $OUT/$name-gpp.wav
+}
+CLONETEXT='The clone reads a new line now, in the voice it was given.'
+SAMPLETEXT=$(python3 -c "import json,sys; print(json.load(open(sys.argv[1]))['text'])" $OUT/design-inproc.json)
+clone clone-icl '{}' --text "voice_ref_text=$SAMPLETEXT"
+$INPROC clone --ref $OUT/design-gpp-0.wav --ref-text "$SAMPLETEXT" --seed 9 --text "$CLONETEXT" --models-root "$MODELS" --out $OUT/clone-icl-inproc.wav 2>> $LOG | tail -1 > $OUT/clone-icl-inproc.json
+say "      clone (icl): over GPP $(grep -o 'ran in [0-9.]* s' $OUT/clone-icl-gpp.log | head -1); in-process $(cat $OUT/clone-icl-inproc.json)"
+same "clone of the designed voice, with its text (icl)" $OUT/clone-icl-gpp.wav $OUT/clone-icl-inproc.wav
+clone clone-xvector '{}'
+$INPROC clone --ref $OUT/design-gpp-0.wav --seed 9 --text "$CLONETEXT" --models-root "$MODELS" --out $OUT/clone-xvector-inproc.wav 2>> $LOG | tail -1 > $OUT/clone-xvector-inproc.json
+same "clone of the designed voice, without its text (x-vector)" $OUT/clone-xvector-gpp.wav $OUT/clone-xvector-inproc.wav
 
 for s in $OUT/*.gpp; do
   if python3 ${GAEA_SPEC_ROOT:-$ROOT/../gaea-mes-media-server}/tools/validate.py --transcript $s >> $LOG 2>&1; then pass=$((pass+1)); say "PASS  ${s:t} passes validate.py"

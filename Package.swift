@@ -16,8 +16,8 @@ let package = Package(
     platforms: [.macOS(.v26)], // mlx-engine-swift's MLXToolKit requires macOS 26
     dependencies: [
         kitPath.map { .package(path: $0) }
-            ?? .package(url: "https://github.com/xocialize-code/gaea-plugin-kit.git", from: "0.7.1"),
-        .package(url: "https://github.com/xocialize/mlx-qwen3-tts-swift.git", exact: "0.6.0"),
+            ?? .package(url: "https://github.com/xocialize-code/gaea-plugin-kit.git", from: "0.8.0"),
+        .package(url: "https://github.com/xocialize/mlx-qwen3-tts-swift.git", exact: "0.7.0"),
         .package(url: "https://github.com/xocialize/mlx-engine-swift.git", from: "0.73.0"),
         // MLX's random state: the talker samples from it, so a seeded run seeds it first.
         .package(url: "https://github.com/ml-explore/mlx-swift", from: "0.33.0"),

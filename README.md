@@ -15,6 +15,7 @@ gaea plugins add https://github.com/xocialize-code/gaea-plugin-qwen3-tts
 | Model | Checkpoint | MES operation |
 |---|---|---|
 | `qwen3-tts` | CustomVoice | `audio.speak` with nine preset speakers |
+| `qwen3-tts-clone` | Base | `audio.speak` in a voice cloned from `voice_ref` (0.2.0) |
 | `qwen3-tts-design` | VoiceDesign | `audio.design_voice` |
 
 - **Voices.** Vivian, Serena, Uncle Fu, Dylan (Beijing dialect) and Eric (Sichuan dialect) speak Chinese natively,
@@ -33,8 +34,15 @@ gaea plugins add https://github.com/xocialize-code/gaea-plugin-qwen3-tts
 - **Seeds.** The talker samples from MLX's random state. The worker seeds it with the job's seed (0 to 2³² − 1) before
   every generation and passes the seed to the package. The same request gives the same WAV.
 - **Output.** 24 kHz mono 16-bit WAV, converted by Gaea to the request's `output`.
-- **Not yet.** Cloning from `voice_ref` (the Base checkpoint) comes in 0.2.0. It waits on a voice-clone cache MES
-  allows, keyed by the asset and evictable (mlx-audio, AB-A-0233). Streaming waits on the package too.
+- **Cloning.** `qwen3-tts-clone` speaks in the voice of a 3 to 30 s reference clip (`voice_ref`). A longer clip is
+  trimmed with `voice_ref_trimmed`, and a stereo one mixed down with `audio_downmixed`.
+  - **With the clip's transcript** (`voice_ref_text`), it clones in context (ICL): much closer to the voice.
+  - **Without it**, it clones from the speaker embedding alone (x-vector).
+  - **Caching:** the reference's features are cached in the package (mlx-qwen3-tts-swift 0.7.0). A clip sent as an
+    MES asset is keyed by its asset id, and evicted when Gaea reports the asset gone (MES Base §13 rule 6). Any other
+    clip is keyed by its job, and evicted when the job ends.
+  - A second job on the same asset skips the reference's encoding (about 1.4 s against 3.8 s for a short line).
+- **Not yet.** Streaming waits on the package (`StreamEmitting`).
 
 On an M5 Max at int8, warm, a 6.7 s sentence takes about 2.2 s, and two designed samples about 3 s.
 
@@ -46,7 +54,7 @@ with one model loaded measures about 3 GB.
 ## Weights
 
 Gaea sends its models root in `configure` (MLXEngine's store by default). Each lane reads
-`mlx-community/Qwen3-TTS-12Hz-1.7B-{CustomVoice,VoiceDesign}-{8bit,bf16,4bit}` and the shared codec,
+`mlx-community/Qwen3-TTS-12Hz-1.7B-{CustomVoice,Base,VoiceDesign}-{8bit,bf16,4bit}` and the shared codec,
 `Qwen/Qwen3-TTS-Tokenizer-12Hz`, there, and downloads them on `prepare` or `materialize` when they're missing (about
 3.1 GB per 8-bit checkpoint, and 0.7 GB for the codec).
 
@@ -75,7 +83,8 @@ scripts/golden.sh <out-dir>
 `golden.sh` runs seeded jobs over GPP on the signed bundle and through `qwen3-inproc`, and needs each pair to be the
 same WAV byte for byte:
 - speak cases: Ryan neutral, Ryan angry, Aiden with a described delivery, and Vivian in Chinese with a pause;
-- two designed samples of one description.
+- two designed samples of one description;
+- the first sample cloned with its text (ICL) and without it (x-vector).
 
 ## CI secrets
 

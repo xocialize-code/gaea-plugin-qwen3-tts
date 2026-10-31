@@ -12,6 +12,8 @@ import Qwen3Plugin
 //   qwen3-inproc speak [--text <text> | --text-file <path>] [--voice ryan] [--language en] [--emotion <label>]
 //                      [--emotion-description <text>] [--seed 42] [--lane int8 | bf16 | int4] [--models-root <dir>]
 //                      [--out <wav>]
+//   qwen3-inproc clone --ref <wav> [--ref-text <transcript>] [--text <text> | --text-file <path>] [--language en]
+//                      [--seed 42] [--lane int8] [--models-root <dir>] [--out <wav>]
 //   qwen3-inproc design --description <text> [--text <sample>] [--language en] [--count 1] [--seed 42] [--lane int8]
 //                       [--models-root <dir>] [--out-dir <dir>]
 
@@ -32,13 +34,13 @@ let seed = UInt64(option("--seed") ?? "") ?? 42
 let languageTag = option("--language")
 let modelsRoot = URL(fileURLWithPath: option("--models-root")
                      ?? NSHomeDirectory() + "/Library/Application Support/MLXEngine/Models", isDirectory: true)
-let variant: Qwen3TTSVariant = mode == "design" ? .voiceDesign : .customVoice
+let variant: Qwen3TTSVariant = mode == "design" ? .voiceDesign : mode == "clone" ? .base : .customVoice
 guard let lane = lanes(variant).first(where: { $0.id == laneID }) else { fatalError("no lane \(laneID)") }
 
 // The budget Gaea sends a worker on a large Mac (wiresWeights off).
 let engine = MLXServeEngine(workerBudget: WorkerBudget(ceilingBytes: 64_000_000_000, wiresWeights: false))
 await engine.useModelStore(ModelStore(root: modelsRoot))
-let id = PackageID(mode == "design" ? designModelID : speakModelID)
+let id = PackageID(mode == "design" ? designModelID : mode == "clone" ? cloneModelID : speakModelID)
 _ = try await engine.register(Qwen3TTSPackage.registration, configuration: lane.configuration, id: id)
 var clock = ContinuousClock.now
 _ = try await engine.prepare(.tts, package: id)
@@ -57,6 +59,18 @@ if mode == "design" {
     }
     result["text"] = plan.text
     result["count"] = plan.count
+} else if mode == "clone" {
+    let text = try option("--text-file").map { try String(contentsOfFile: $0, encoding: .utf8) }
+        ?? option("--text") ?? "Gaea speaks. This sentence came from a signed plugin, over its own protocol."
+    guard let ref = option("--ref") else { fatalError("clone needs --ref") }
+    // A job of its own, keyed by the job as the worker keys a reference that isn't an asset.
+    let plan = try clonePlan(text: text, reference: try Data(contentsOf: URL(fileURLWithPath: ref)), transcript: option("--ref-text"),
+                             language: languageTag, asset: nil, job: "inproc", seed: seed)
+    let pcm = try await speak(plan.pieces) { words in try await draw(request(plan, words: words), seed: plan.seed, run: run) }
+    _ = try await run(eviction([plan.cacheKey]))
+    if let out = option("--out") { try wav16(pcm).write(to: URL(fileURLWithPath: out)) }
+    result["clone"] = plan.effective["x-qwen3.clone"]?.stringValue
+    result["audio_s"] = Double(pcm.count / 2) / Double(sampleRate)
 } else {
     let text = try option("--text-file").map { try String(contentsOfFile: $0, encoding: .utf8) }
         ?? option("--text") ?? "Gaea speaks. This sentence came from a signed plugin, over its own protocol."
