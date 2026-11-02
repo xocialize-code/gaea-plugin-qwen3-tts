@@ -225,7 +225,7 @@ let designOffer = PluginManifest.Offer(
     ])
 
 public let qwen3Plugin = GaeaPluginDefinition(
-    id: "com.xocialize.gaea.qwen3-tts", version: "0.2.0", minGaea: "0.9.0", team: "CFZS6RXUCP",
+    id: "com.xocialize.gaea.qwen3-tts", version: "0.2.1", minGaea: "0.9.0", team: "CFZS6RXUCP",
     repo: "https://github.com/xocialize-code/gaea-plugin-qwen3-tts", title: "Qwen3-TTS",
     summary: "Qwen3-TTS 1.7B: expressive speech in ten languages with nine preset speakers, speech in a voice cloned from a clip (MES audio.speak), and voices designed from a description (audio.design_voice).",
     license: "Apache-2.0", executable: "gaea-qwen3-tts-worker",
